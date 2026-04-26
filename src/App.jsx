@@ -328,7 +328,8 @@ const NoteModal = ({ isOpen, onClose, onSave, initialData }) => {
   // =========================================================
   const handleSubmit = async () => {
     if (!formData.content.trim() || !formData.author.trim()) return;
-    await onSave(formData); // ← awaitを追加
+    await onSave(formData); 
+    onClose();
   };
 
   return (
@@ -493,7 +494,8 @@ export default function App() {
     return () => window.removeEventListener('resize', h);
   }, []);
 
-  const handleSaveNote = async (noteData) => {
+const handleSaveNote = async (noteData) => {
+  try {
     if (noteData.id) {
       const { id, ...dataToSave } = noteData;
       await updateDoc(doc(db, 'notes', id), { ...dataToSave, updatedAt: serverTimestamp() });
@@ -505,9 +507,14 @@ export default function App() {
         updatedAt: serverTimestamp(),
       });
     }
+  } catch (e) {
+    console.error('保存エラー:', e);
+  } finally {
+    // ✅ 成功・失敗どちらでも必ずモーダルを閉じる
     setIsModalOpen(false);
     setEditingNote(null);
-  };
+  }
+};
 
   const handleDeleteNote = async (id) => {
     if (window.confirm('この付箋を削除してもよろしいですか？')) {
