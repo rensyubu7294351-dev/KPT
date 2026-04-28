@@ -523,20 +523,46 @@ export default function App() {
   const [isDesktop,    setIsDesktop]    = useState(() => window.innerWidth >= 768);
 
   useEffect(() => {
-    const q = query(collection(db, 'notes'), orderBy('createdAt', 'asc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setNotes(data);
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    let unsubscribe;
+
+    const subscribe = () => {
+      const q = query(collection(db, 'notes'), orderBy('createdAt', 'asc'));
+      unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          setNotes(data);
+          setLoading(false);
+        },
+        (error) => {
+          // 接続が切れたら3秒後に自動再接続
+          console.warn('Firestore接続エラー。再接続します...', error);
+          setTimeout(() => subscribe(), 3000);
+        }
+      );
+    };
+
+    subscribe();
+    return () => unsubscribe?.();
   }, []);
 
+  // ★ 画面サイズ監視
   useEffect(() => {
     const h = () => setIsDesktop(window.innerWidth >= 768);
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
   }, []);
+
+  // ★ ネットワーク復帰時に自動リロード
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('ネットワーク復帰。再接続します...');
+      window.location.reload();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
 
 const handleSaveNote = async (noteData) => {
   try {
