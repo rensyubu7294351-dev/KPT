@@ -303,6 +303,7 @@ const NoteModal = ({ isOpen, onClose, onSave, initialData }) => {
     id: '', type: 'Keep', month: 1, koma: 1,
     department: '運営スタッフ', content: '', author: '', mediaItems: [],
   });
+  const [errors, setErrors] = useState({}); 
 
   useEffect(() => {
     if (isOpen) {
@@ -321,16 +322,19 @@ const NoteModal = ({ isOpen, onClose, onSave, initialData }) => {
     setFormData(prev => ({ ...prev, [name]: (name === 'month' || name === 'koma') ? Number(value) : value }));
   };
 
-  // =========================================================
-  // ★ バグ修正①: モーダルが閉じない問題
-  //   handleSubmitがasyncでないためFirestore保存完了を待てずモーダルが
-  //   閉じなかった。onSaveをawaitで待つように修正。
-  // =========================================================
-  const handleSubmit = async () => {
-    if (!formData.content.trim() || !formData.author.trim()) return;
-    await onSave(formData); 
-    onClose();
-  };
+
+const handleSubmit = async () => {
+  const newErrors = {};
+  if (!formData.content.trim()) newErrors.content = '内容を入力してください';
+  if (!formData.author.trim())  newErrors.author  = '入力者名を入力してください';
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    return;
+  }
+  setErrors({});
+  await onSave(formData);
+  onClose();
+};
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50" onClick={onClose}>
@@ -369,19 +373,45 @@ const NoteModal = ({ isOpen, onClose, onSave, initialData }) => {
               </div>
             ))}
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">内容</label>
-            <textarea name="content" value={formData.content} onChange={handleChange}
-              placeholder="良かったこと、問題点、次に挑戦したいことを入力してください..."
-              rows={4} required
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 text-base text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none leading-relaxed" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">入力者</label>
-            <input type="text" name="author" value={formData.author} onChange={handleChange}
-              placeholder="あなたのお名前" required
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 text-base text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-400" />
-          </div>
+
+
+<div>
+  <label className="block text-xs font-semibold text-slate-500 mb-1">
+    内容
+    <span className="ml-1.5 text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">必須</span>
+  </label>
+  <textarea name="content" value={formData.content} onChange={handleChange}
+    placeholder="良かったこと、問題点、次に挑戦したいことを入力してください..."
+    rows={4}
+    className={`w-full rounded-lg border bg-slate-50 p-3 text-base text-slate-800 focus:bg-white focus:outline-none focus:ring-2 resize-none leading-relaxed transition-colors ${
+      errors.content ? 'border-red-400 focus:ring-red-400' : 'border-slate-200 focus:ring-slate-400'
+    }`} />
+  {errors.content && (
+    <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+      <AlertCircle size={11} />{errors.content}
+    </p>
+  )}
+</div>
+
+
+<div>
+  <label className="block text-xs font-semibold text-slate-500 mb-1">
+    入力者
+    <span className="ml-1.5 text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">必須</span>
+  </label>
+  <input type="text" name="author" value={formData.author} onChange={handleChange}
+    placeholder="あなたのお名前"
+    className={`w-full rounded-lg border bg-slate-50 p-3 text-base text-slate-800 focus:bg-white focus:outline-none focus:ring-2 transition-colors ${
+      errors.author ? 'border-red-400 focus:ring-red-400' : 'border-slate-200 focus:ring-slate-400'
+    }`} />
+  {errors.author && (
+    <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+      <AlertCircle size={11} />{errors.author}
+    </p>
+  )}
+</div>
+
+
           <MediaUploader
             mediaItems={formData.mediaItems || []}
             onMediaChange={(items) => setFormData(prev => ({ ...prev, mediaItems: items }))}
@@ -452,13 +482,27 @@ const NoteCard = ({ note, onEdit, onDelete, onDragStart }) => {
         </div>
       </div>
       <MediaPreview items={note.mediaItems} />
-      <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed mb-3">{note.content}</p>
-      <div className="flex justify-between items-center text-xs text-slate-500">
-        <span className="font-medium bg-white/70 px-2 py-0.5 rounded-md">{note.department}</span>
-        <div className="flex items-center gap-1">
-          <User size={11} className="text-slate-400" /><span>{note.author}</span>
-        </div>
-      </div>
+<p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed mb-3">{note.content}</p>
+<div className="flex justify-between items-center text-xs text-slate-500 mb-1.5">
+  <span className="font-medium bg-white/70 px-2 py-0.5 rounded-md">{note.department}</span>
+  <div className="flex items-center gap-1">
+    <User size={11} className="text-slate-400" /><span>{note.author}</span>
+  </div>
+</div>
+
+{/* ★ 作成日表示 */}
+{note.createdAt && (
+  <div className="flex items-center gap-1 text-[10px] text-slate-400">
+    <Calendar size={10} />
+    <span>
+      {note.createdAt.toDate
+        ? note.createdAt.toDate().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+        : new Date(note.createdAt).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+      }
+    </span>
+  </div>
+)}
+
     </div>
   );
 };
