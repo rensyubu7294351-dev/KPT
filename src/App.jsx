@@ -15,8 +15,8 @@ import {
 // ★ Cloudinary設定（ここを自分の情報に書き換えてください）
 // =========================================================
 const CLOUDINARY_CONFIG = {
-  cloudName:    'dwwduejls',      // ← STEP3でメモしたCloud Name
-  uploadPreset: 'test729',  // ← STEP2で作ったPreset name
+  cloudName:    'dwkfc7fhi',      // ← STEP3でメモしたCloud Name
+  uploadPreset: '729KPI',  // ← STEP2で作ったPreset name
 };
 const CLOUDINARY_UPLOAD_URL =
   `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`;
